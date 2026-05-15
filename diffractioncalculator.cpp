@@ -8,25 +8,35 @@
 #endif
 
 DiffractionCalculator::DiffractionCalculator(QObject *parent)
-    : QObject(parent), m_l(0.0), m_w(0.0), m_k(0.0), m_xMin(-1e-3), m_xMax(1e-3), m_pts(1000)
+    : QObject(parent), m_l(0.0), m_w(0.0), m_d(0.0), m_N(1), m_k(0.0),
+    m_xMin(-1e-3), m_xMax(1e-3), m_pts(2000)
 {
 }
 
 void DiffractionCalculator::setLambda(double l)
 {
     m_l = l;
-    // l уже в нанометрах, переводим в метры
     double lm = m_l * 1e-9;
     m_k = (lm > 0) ? (2.0 * M_PI / lm) : 0.0;
-    qDebug() << "Lambda:" << m_l << "нм =" << lm << "м, k:" << m_k;
+    qDebug() << "Lambda:" << m_l << "нм, k:" << m_k;
 }
 
 void DiffractionCalculator::setWide(double w)
 {
     m_w = w;
-    // w уже в микрометрах, переводим в метры
-    double wm = m_w * 1e-6;
-    qDebug() << "Wide:" << m_w << "мкм =" << wm << "м";
+    qDebug() << "Wide:" << m_w << "мкм";
+}
+
+void DiffractionCalculator::setPeriod(double p)
+{
+    m_d = p;
+    qDebug() << "Period:" << m_d << "мкм";
+}
+
+void DiffractionCalculator::setSlitsCount(int n)
+{
+    m_N = n;
+    qDebug() << "Number of slits:" << m_N;
 }
 
 void DiffractionCalculator::setRange(double xMin, double xMax, int pts)
@@ -39,9 +49,25 @@ void DiffractionCalculator::setRange(double xMin, double xMax, int pts)
 
 double DiffractionCalculator::f(double x)
 {
-    double wm = m_w * 1e-6;  // ширина щели в метрах
-    double hw = wm / 2.0;
-    return (fabs(x) <= hw) ? 1.0 : 0.0;
+    if (m_N <= 0 || m_w <= 0 || m_d <= 0) return 0.0;
+
+    double wm = m_w * 1e-6;      // ширина щели в метрах
+    double dm = m_d * 1e-6;      // период в метрах
+    double hw = wm / 2.0;        // половина ширины щели
+
+    // Начало решетки: центрируем относительно 0
+    double start = - (m_N - 1) * dm / 2.0;
+
+    for (int i = 0; i < m_N; ++i) {
+        double slitCenter = start + i * dm;
+        double left = slitCenter - hw;
+        double right = slitCenter + hw;
+
+        if (x >= left && x <= right) {
+            return 1.0;  // внутри щели
+        }
+    }
+    return 0.0;  // вне щелей
 }
 
 std::complex<double> DiffractionCalculator::F(double sinTheta)
@@ -80,41 +106,24 @@ double DiffractionCalculator::from_amp(const std::complex<double>& a)
 
 double DiffractionCalculator::I_analytical(double ang)
 {
-    if (m_l <= 0 || m_w <= 0) {
-        qDebug() << "I_analytical: параметры не установлены!" << m_l << m_w;
-        return 0.0;
-    }
+    // Аналитический метод работает только для одной щели
+    if (m_N != 1) return 0.0;
+
+    if (m_l <= 0 || m_w <= 0) return 0.0;
 
     double st = to_sin(ang);
-    double wm = m_w * 1e-6;      // ширина в метрах
-    double lm = m_l * 1e-9;      // длина волны в метрах
-    double k = 2.0 * M_PI / lm;  // волновое число
-
-    // Аргумент для sinc: (π * a * sinθ) / λ = (k * a * sinθ) / 2
+    double wm = m_w * 1e-6;
+    double lm = m_l * 1e-9;
+    double k = 2.0 * M_PI / lm;
     double arg = k * wm * st / 2.0;
 
-    double A;
-    if (fabs(arg) < 1e-10) {
-        A = wm;  // sinc(0) = 1, амплитуда = a
-    } else {
-        A = wm * sin(arg) / arg;
-    }
-
-    double I = A * A;
-
-    // Для отладки - выводим только для первых нескольких углов
-    static int callCount = 0;
-    if (callCount < 5) {
-        qDebug() << "I_analytical:" << ang << "град, st =" << st << ", arg =" << arg << ", I =" << I;
-        callCount++;
-    }
-
-    return I;
+    double A = (fabs(arg) < 1e-10) ? wm : wm * sin(arg) / arg;
+    return A * A;
 }
 
 double DiffractionCalculator::I_numerical(double ang)
 {
-    if (m_l <= 0 || m_w <= 0) return 0.0;
+    if (m_l <= 0 || m_w <= 0 || m_N <= 0) return 0.0;
     return from_amp(F(to_sin(ang)));
 }
 
@@ -122,18 +131,12 @@ QVector<QPair<double, double>> DiffractionCalculator::I_range_analytical(double 
 {
     QVector<QPair<double, double>> res;
 
-    qDebug() << "I_range_analytical: start=" << start << "end=" << end << "pts=" << pts;
-
-    if (pts <= 1 || m_l <= 0 || m_w <= 0) {
-        qDebug() << "Ошибка: неверные параметры!";
-        return res;
-    }
+    if (pts <= 1 || m_l <= 0 || m_w <= 0 || m_N != 1) return res;
 
     double step = (end - start) / (pts - 1);
     double Imax = 0.0;
     QVector<double> Ivals;
 
-    // Сначала вычисляем все интенсивности и находим максимум
     for (int i = 0; i < pts; ++i) {
         double ang = start + i * step;
         double I = I_analytical(ang);
@@ -141,24 +144,11 @@ QVector<QPair<double, double>> DiffractionCalculator::I_range_analytical(double 
         if (I > Imax) Imax = I;
     }
 
-    qDebug() << "Imax =" << Imax;
+    if (Imax <= 0) Imax = 1.0;
 
-    if (Imax <= 0) {
-        qDebug() << "Предупреждение: Imax <= 0, устанавливаю Imax = 1";
-        Imax = 1.0;
-    }
-
-    // Нормируем и заполняем результат
     for (int i = 0; i < pts; ++i) {
         double ang = start + i * step;
-        double normI = Ivals[i] / Imax;
-        res.append(qMakePair(ang, normI));
-    }
-
-    qDebug() << "Возвращено" << res.size() << "точек";
-    if (res.size() > 0) {
-        qDebug() << "Первая точка:" << res[0].first << "->" << res[0].second;
-        qDebug() << "Центр:" << res[pts/2].first << "->" << res[pts/2].second;
+        res.append(qMakePair(ang, Ivals[i] / Imax));
     }
 
     return res;
@@ -168,7 +158,7 @@ QVector<QPair<double, double>> DiffractionCalculator::I_range_numerical(double s
 {
     QVector<QPair<double, double>> res;
 
-    if (pts <= 1 || m_l <= 0 || m_w <= 0) return res;
+    if (pts <= 1 || m_l <= 0 || m_w <= 0 || m_N <= 0) return res;
 
     double step = (end - start) / (pts - 1);
     double Imax = 0.0;
@@ -188,6 +178,6 @@ QVector<QPair<double, double>> DiffractionCalculator::I_range_numerical(double s
         res.append(qMakePair(ang, Ivals[i] / Imax));
     }
 
-    qDebug() << "Численный расчет завершен";
+    qDebug() << "Численный расчет для" << m_N << "щелей, период" << m_d << "мкм";
     return res;
 }
