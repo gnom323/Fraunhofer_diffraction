@@ -18,11 +18,11 @@ EmptyDisplayArea::EmptyDisplayArea(QWidget *parent) : QLabel(parent) {
     setFixedSize(900, 600);
 }
 
-QSize EmptyDisplayArea::sizeHint() const {
+QSize EmptyDisplayArea::sizeHint() const { // задание желаемого размера под виджеты
     return QSize(900, 600);
 }
 
-QSize EmptyDisplayArea::minimumSizeHint() const {
+QSize EmptyDisplayArea::minimumSizeHint() const { // задание минимального размера под виджеты
     return QSize(900, 600);
 }
 
@@ -32,14 +32,14 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         return;
     }
 
-    // Создаем изображение для графика
+    // создание изображения для графика
     QImage image(880, 580, QImage::Format_ARGB32);
     image.fill(Qt::white);
 
     QPainter painter(&image);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Настройки отступов
+    // отступы
     int leftMargin = 70;
     int rightMargin = 40;
     int topMargin = 70;
@@ -47,7 +47,7 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
     int graphWidth = image.width() - leftMargin - rightMargin;
     int graphHeight = image.height() - topMargin - bottomMargin;
 
-    // Находим максимальные значения
+    // максимальные значения
     double maxIntensity = 0.0;
     double minAngle = data.first().first;
     double maxAngle = data.last().first;
@@ -58,16 +58,14 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         }
     }
 
-    // Рисуем оси
+    // рисуем оси
     painter.setPen(QPen(Qt::black, 2));
 
-    // Ось Y
+    // оси x и y
     painter.drawLine(leftMargin, topMargin, leftMargin, image.height() - bottomMargin);
-    // Ось X
-    painter.drawLine(leftMargin, image.height() - bottomMargin,
-                     image.width() - rightMargin, image.height() - bottomMargin);
+    painter.drawLine(leftMargin, image.height() - bottomMargin, image.width() - rightMargin, image.height() - bottomMargin);
 
-    // Рисуем стрелки на осях
+    // стрелки на осях
     painter.drawLine(leftMargin, topMargin, leftMargin - 5, topMargin + 10);
     painter.drawLine(leftMargin, topMargin, leftMargin + 5, topMargin + 10);
     painter.drawLine(image.width() - rightMargin, image.height() - bottomMargin,
@@ -75,25 +73,25 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
     painter.drawLine(image.width() - rightMargin, image.height() - bottomMargin,
                      image.width() - rightMargin - 10, image.height() - bottomMargin + 5);
 
-    // Подписи осей
+    // подписи осей
     painter.setFont(QFont("Arial", 11, QFont::Bold));
     painter.drawText(image.width() / 2 - 50, image.height() - 8, "Угол θ (градусы)");
 
-    // Вертикальная ось
+    // вертикальная ось
     painter.save();
     painter.translate(18, image.height() / 2);
     painter.rotate(-90);
     painter.drawText(-30, 0, "Нормированная интенсивность");
     painter.restore();
 
-    // Определяем шаг для меток на оси X (кратный 5)
+    // шаг для меток на оси X (кратный 5)
     int xTickStep = 5;
 
-    // Находим ближайшие кратные 5 значения
+    // нахождение ближайших кратных 5 значений
     int firstTick = (static_cast<int>(ceil(minAngle / xTickStep)) * xTickStep);
     int lastTick = (static_cast<int>(floor(maxAngle / xTickStep)) * xTickStep);
 
-    // Рисуем метки на оси X с шагом 5
+    // рисуем метки на оси X с шагом 5
     painter.setFont(QFont("Arial", 9));
     painter.setPen(QPen(Qt::black, 1));
 
@@ -115,7 +113,8 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         }
     }
 
-    // Добавляем дополнительную метку в начале и конце если нужно
+
+    // добавляем дополнительную метку в начале и конце если нужно
     if (firstTick > minAngle + 1) {
         int x = leftMargin;
         painter.drawLine(x, image.height() - bottomMargin, x, image.height() - bottomMargin + 6);
@@ -128,7 +127,7 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         painter.drawText(x - 12, image.height() - bottomMargin + 22, QString::number(maxAngle, 'f', 0));
     }
 
-    // Рисуем метки на оси Y
+    // рисуем метки на оси Y
     int numYTicks = 5;
     for (int i = 0; i <= numYTicks; ++i) {
         double intensity = maxIntensity * i / numYTicks;
@@ -147,8 +146,8 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         painter.drawText(leftMargin - 45, y + 4, label);
     }
 
-    // Рисуем график интенсивности
-    QPen graphPen(QColor(52, 152, 219), 2);
+    // рисуем график интенсивности
+    QPen graphPen(QColor(52, 152, 219), 2); // параметры пера: (QColor(R, G, B), толщина пера)
     painter.setPen(graphPen);
 
     double prevX = leftMargin + (data[0].first - minAngle) / (maxAngle - minAngle) * graphWidth;
@@ -158,12 +157,12 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         double x = leftMargin + (data[i].first - minAngle) / (maxAngle - minAngle) * graphWidth;
         double y = image.height() - bottomMargin - (data[i].second / maxIntensity) * graphHeight;
 
-        painter.drawLine(prevX, prevY, x, y);
+        painter.drawLine(prevX, prevY, x, y); // рисует очень маленькие отрезки с концами в точках (prevX, prevY) и (x, y)
         prevX = x;
         prevY = y;
     }
 
-    // Заливаем область под графиком
+    // заливаем область под графиком
     QPainterPath path;
     path.moveTo(leftMargin + (data[0].first - minAngle) / (maxAngle - minAngle) * graphWidth,
                 image.height() - bottomMargin);
@@ -174,16 +173,16 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
         path.lineTo(x, y);
     }
 
-    path.lineTo(prevX, image.height() - bottomMargin);
+    path.lineTo(prevX, image.height() - bottomMargin); // падает на ось X
     path.closeSubpath();
 
     painter.fillPath(path, QColor(52, 152, 219, 50));
 
-    // Информация о параметрах (λ, a, d, N)
+    // параметры lambda, a, d, N
     painter.setPen(QPen(QColor(44, 62, 80), 2));
     painter.setFont(QFont("Arial", 10, QFont::Bold));
 
-    // Белый прямоугольник под текстом
+    // белый прямоугольник под текстом
     QRect infoRect(leftMargin + 10, topMargin - 55, 400, 45);
     painter.fillRect(infoRect, QColor(255, 255, 255, 220));
     painter.drawRect(infoRect);
@@ -199,20 +198,21 @@ void EmptyDisplayArea::drawGraph(const QVector<QPair<double, double>>& data, dou
     painter.drawText(leftMargin + 240, topMargin - 35, periodText);
     painter.drawText(leftMargin + 350, topMargin - 35, slitsText);
 
-    // Горизонтальная линия на уровне 0.5
+    // горизонтальная линия на уровне 0.5
     painter.setPen(QPen(QColor(200, 200, 200), 1, Qt::DashLine));
     if (maxIntensity > 0) {
         int halfMaxY = image.height() - bottomMargin - (0.5 / maxIntensity) * graphHeight;
         painter.drawLine(leftMargin, halfMaxY, image.width() - rightMargin, halfMaxY);
     }
 
-    // Отображаем изображение
+    // показываем изображение
     QPixmap pixmap = QPixmap::fromImage(image);
     setPixmap(pixmap);
     setScaledContents(true);
 }
 
 // ========== РЕАЛИЗАЦИЯ CustomTitleBar ==========
+
 
 CustomTitleBar::CustomTitleBar(QWidget *parent) : QWidget(parent), dragging(false) {
     setFixedHeight(40);
@@ -259,12 +259,12 @@ void CustomTitleBar::paintEvent(QPaintEvent *event) {
     painter.drawText(QRect(15, 0, width() - 100, height()), Qt::AlignVCenter,
                      "Дифракция Фраунгофера на решетке - расчет интенсивности");
 
-    closeButton->move(width() - closeButton->width() - 10, (height() - closeButton->height()) / 2);
+    closeButton->move(width() - closeButton->width() - 10, (height() - closeButton->height()) / 2); // позиция кнопки
 
     QWidget::paintEvent(event);
 }
 
-void CustomTitleBar::mousePressEvent(QMouseEvent *event) {
+void CustomTitleBar::mousePressEvent(QMouseEvent *event) { // жмаем на мышку
     if (event->button() == Qt::LeftButton) {
         dragging = true;
         dragPosition = event->globalPos() - parentWidget()->frameGeometry().topLeft();
@@ -272,16 +272,9 @@ void CustomTitleBar::mousePressEvent(QMouseEvent *event) {
     }
 }
 
-void CustomTitleBar::mouseMoveEvent(QMouseEvent *event) {
+void CustomTitleBar::mouseMoveEvent(QMouseEvent *event) { // двигаем МЫШЪ
     if (dragging && (event->buttons() & Qt::LeftButton)) {
         parentWidget()->move(event->globalPos() - dragPosition);
-        event->accept();
-    }
-}
-
-void CustomTitleBar::mouseReleaseEvent(QMouseEvent *event) {
-    if (event->button() == Qt::LeftButton) {
-        dragging = false;
         event->accept();
     }
 }
