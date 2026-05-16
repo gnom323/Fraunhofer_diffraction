@@ -672,15 +672,15 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 
-void MainWindow::calculateAndDraw()
+void MainWindow::calculateAndDraw() // расчет и отрисовка
 {
     qDebug() << "=== РАСЧЕТ ДИФРАКЦИИ ===";
-    qDebug() << "lambda =" << lambda << "нм, wide =" << wide << "мкм, period =" << period << "мкм, slits =" << slits;
+    qDebug() << "lambda =" << lambda << "нм, wide =" << wide << "мкм, period =" << period << "мкм, slits =" << slits; 
 
-    if (lambda <= 0 || wide <= 0 || period <= 0 || slits <= 0) {
+    if (lambda <= 0 || wide <= 0 || period <= 0 || slits <= 0) { // проверка физической корректности введенных параметров
         qDebug() << "ОШИБКА: параметры не установлены";
         emptyArea->QLabel::setText("Ошибка: установите все параметры (>0)");
-        return;
+        return; // если введенные параметры некорректны, отрисовка не производится
     }
 
     // Передаем параметры в калькулятор
@@ -691,7 +691,7 @@ void MainWindow::calculateAndDraw()
 
     // Настраиваем диапазон для численного метода
     double totalWidth = slits * period * 1e-6;
-    calculator->setRange(-totalWidth * 2, totalWidth * 2, 3000);
+    calculator->setRange(-totalWidth * 2, totalWidth * 2, 3000); // по умолчанию в калькулятор диффракции передается 3000 промежуточков интегририования
 
     QVector<QPair<double, double>> res;
 
