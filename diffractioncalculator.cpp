@@ -4,16 +4,16 @@
 #include <complex>
 
 #ifndef M_PI
-#define M_PI 3.14159265358979323846
+#define M_PI 3.14159265358979323846 // объявление числа пи
 #endif
 
-DiffractionCalculator::DiffractionCalculator(QObject *parent)
+DiffractionCalculator::DiffractionCalculator(QObject *parent) // объявление основных переменных
     : QObject(parent), m_l(0.0), m_w(0.0), m_d(0.0), m_N(1), m_k(0.0),
     m_xMin(-1e-3), m_xMax(1e-3), m_pts(2000)
 {
 }
 
-void DiffractionCalculator::setLambda(double l)
+void DiffractionCalculator::setLambda(double l) // ф-ция нахождения модуля волнового вектора
 {
     m_l = l;
     double lm = m_l * 1e-9;
@@ -21,25 +21,25 @@ void DiffractionCalculator::setLambda(double l)
     qDebug() << "Lambda:" << m_l << "нм, k:" << m_k;
 }
 
-void DiffractionCalculator::setWide(double w)
+void DiffractionCalculator::setWide(double w) // возвращает ширину щели
 {
     m_w = w;
     qDebug() << "Wide:" << m_w << "мкм";
 }
 
-void DiffractionCalculator::setPeriod(double p)
+void DiffractionCalculator::setPeriod(double p) // период
 {
     m_d = p;
     qDebug() << "Period:" << m_d << "мкм";
 }
 
-void DiffractionCalculator::setSlitsCount(int n)
+void DiffractionCalculator::setSlitsCount(int n) // кол-во щелей
 {
     m_N = n;
     qDebug() << "Number of slits:" << m_N;
 }
 
-void DiffractionCalculator::setRange(double xMin, double xMax, int pts)
+void DiffractionCalculator::setRange(double xMin, double xMax, int pts) // пределы графика (а потом и инт-ния)
 {
     m_xMin = xMin;
     m_xMax = xMax;
@@ -58,7 +58,7 @@ double DiffractionCalculator::f(double x)
     // Начало решетки: центрируем относительно 0
     double start = - (m_N - 1) * dm / 2.0;
 
-    for (int i = 0; i < m_N; ++i) {
+    for (int i = 0; i < m_N; ++i) { // проходимся циклом и ищем, находится ли точка центра внутри области
         double slitCenter = start + i * dm;
         double left = slitCenter - hw;
         double right = slitCenter + hw;
@@ -74,10 +74,10 @@ std::complex<double> DiffractionCalculator::F(double sinTheta)
 {
     if (m_k == 0.0 || m_l <= 0) return std::complex<double>(0.0, 0.0);
 
-    std::complex<double> I(0.0, 0.0);
+    std::complex<double> I(0.0, 0.0); // чтение комплексного числа
     double dx = (m_xMax - m_xMin) / m_pts;
 
-    for (int i = 0; i <= m_pts; ++i) {
+    for (int i = 0; i <= m_pts; ++i) { // чиссленное интегрирование
         double x = m_xMin + i * dx;
         double val = f(x);
 
@@ -89,14 +89,14 @@ std::complex<double> DiffractionCalculator::F(double sinTheta)
     return I;
 }
 
-double DiffractionCalculator::to_sin(double ang)
+double DiffractionCalculator::to_sin(double ang) // перевод в радианы
 {
     return sin(ang * M_PI / 180.0);
 }
 
 double DiffractionCalculator::norm(double I, double Imax)
 {
-    return (Imax <= 0) ? I : I / Imax;
+    return (Imax <= 0) ? I : I / Imax; // нормировка
 }
 
 double DiffractionCalculator::from_amp(const std::complex<double>& a)
@@ -117,21 +117,21 @@ double DiffractionCalculator::I_analytical(double ang)
     double k = 2.0 * M_PI / lm;
     double arg = k * wm * st / 2.0;
 
-    double A = (fabs(arg) < 1e-10) ? wm : wm * sin(arg) / arg;
+    double A = (fabs(arg) < 1e-10) ? wm : wm * sin(arg) / arg; // проверка, что аргумент не 0, т к потом будет деление на 0
     return A * A;
 }
 
 double DiffractionCalculator::I_numerical(double ang)
 {
     if (m_l <= 0 || m_w <= 0 || m_N <= 0) return 0.0;
-    return from_amp(F(to_sin(ang)));
+    return from_amp(F(to_sin(ang))); // проверка на дурачка
 }
 
-QVector<QPair<double, double>> DiffractionCalculator::I_range_analytical(double start, double end, int pts)
+QVector<QPair<double, double>> DiffractionCalculator::I_range_analytical(double start, double end, int pts) // аналитическое решение
 {
     QVector<QPair<double, double>> res;
 
-    if (pts <= 1 || m_l <= 0 || m_w <= 0 || m_N != 1) return res;
+    if (pts <= 1 || m_l <= 0 || m_w <= 0 || m_N != 1) return res; // ан. решение только для 1 щели!!!!!!
 
     double step = (end - start) / (pts - 1);
     double Imax = 0.0;
@@ -148,13 +148,13 @@ QVector<QPair<double, double>> DiffractionCalculator::I_range_analytical(double 
 
     for (int i = 0; i < pts; ++i) {
         double ang = start + i * step;
-        res.append(qMakePair(ang, Ivals[i] / Imax));
+        res.append(qMakePair(ang, Ivals[i] / Imax)); // сбор данных для построения графика 
     }
 
     return res;
 }
 
-QVector<QPair<double, double>> DiffractionCalculator::I_range_numerical(double start, double end, int pts)
+QVector<QPair<double, double>> DiffractionCalculator::I_range_numerical(double start, double end, int pts) // численное решение
 {
     QVector<QPair<double, double>> res;
 
